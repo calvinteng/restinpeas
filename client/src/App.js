@@ -1,104 +1,113 @@
 import React, { Component } from 'react';
-import './App.css';
+import axios from 'axios';
+import { Route, Switch, Link } from 'react-router-dom';
+import AddRecipe from './js/components/AddRecipe';
+import DisplayRecipes from './js/components/DisplayRecipes';
+import Login from "./js/components/Login";
+import Register from "./js/components/Register";
+import Profile from "./js/components/Profile";
+import Head from "./js/components/Head";
+import { Layout } from 'antd';
 
-import AddProduct from './components/AddProduct';
-import ProductItem from './components/ProductItem';
-import Users from './components/users/Users'
-
-const products = [
-  {
-    name: 'iPad',
-    price: 200
-  },
-  {
-    name: 'iPhone',
-    price: '650'
-  }
-];
-
-localStorage.setItem('products', JSON.stringify(products));
+const { Content } = Layout;
 
 class App extends Component {
-  constructor(props) {
-    super(props);
-    this.state = { 
-      products: JSON.parse(localStorage.getItem('products'))
-    };
-    this.onAdd = this.onAdd.bind(this);
-    this.onDelete = this.onDelete.bind(this);
-    this.onEditSubmit = this.onEditSubmit.bind(this);
-  }
+	constructor(props) {
+	    super(props);
+	    this.state = {
+	      recipes: [],
+	      user: {},
+	    };
 
-  componentWillMount() {
-    const products = this.getProducts();
+	    this.getLoginStatus = this.getLoginStatus.bind(this);
+	    this.LoginHelper = this.LoginHelper.bind(this);
+	    this.getData = this.getData.bind(this);
+	    this.Home = this.Home.bind(this);
+	}
 
-    this.setState({ products });
-  }
+	componentDidMount() {
+    	this.getData();
+	}
 
-  getProducts() {
-    return this.state.products;
-  }
+	getLoginStatus = (u) => {
+		this.setState({user: u});
+		console.log(u);
+	}
 
-  onAdd(name, price) {
-    const products = this.getProducts();
+	getData() {
+	    axios.get('http://localhost:5000/api/getAllRecipes')
+	      .then((response) => {
+	        console.log(response.data);
+	        this.setState({ recipes: response.data.recipes })
+	      })
+	      .catch((error) => {
+	        console.log(error);
+	      });
+	}
 
-    products.push({
-      name,
-      price
-    });
+	LoginHelper = (props) => {
+		return(
+				<Login
+					checkLogin={this.getLoginStatus}
+					{...props}
+				/>
+			);
+	}
 
-    this.setState({ products })
-  }
+	Home = (props) => {
+	return(
+			<HomePage
+				recipes={this.state.recipes}
+				{...props}
+			/>
+		);
+	}
 
-  onDelete(name) {
-    const products = this.getProducts();
-    const filteredProducts = products.filter(product => {
-      return product.name !== name;
-    });
 
-    this.setState({ products: filteredProducts });
-  }
-
-  onEditSubmit(name, price, originalName) {
-    let products = this.getProducts();
-
-    products = products.map(product => {
-      if (product.name === originalName) {
-        product.name = name;
-        product.price = price;
-      }
-      return product;
-    });
-    this.setState({ products });
-  }
-
-  render() {
-    return (
-      <div className="App">
-        <h1> Users </h1>
-
-        <Users />
-
-        <AddProduct
-          onAdd={this.onAdd}
-        />
-
-        {
-          this.state.products.map( product => {
-            return(
-              <ProductItem
-                key={product.name}
-                {...product}
-                onDelete={this.onDelete}
-                onEditSubmit={this.onEditSubmit}
-              />
-            );
-          })
-        }
-
-      </div>
-    );
-  }
+	render() {
+	    return (
+	      <div>
+			<Head user={this.state.user} />
+	        	<Content style={{ padding: '0 75px', marginTop: 100 }}>
+			        <Switch>
+			          <Route exact path="/" component={this.Home} />
+			          <Route exact path="/login" component={this.LoginHelper}/>
+			          <Route exact path="/register" component={Register}/>
+			          <Route exact path="/add-recipe" component={AddRecipe}/>
+					  <Route exact path="/profile/:tagname" component={Profile} />
+					</Switch>
+				</Content>
+	      </div>
+	    );
+	}
 }
+
+const HomePage = (props) => {
+	return(
+		<div>
+			<h2>Recipes</h2><br/>
+			{
+				props.recipes.map((recipe, i) => {
+					return(
+						<div key={recipe._id}>
+				            <h3> { recipe.title } </h3>
+				            <Link to={'/profile/'+recipe.author}> { recipe.author } </Link>
+				            <p> { recipe.description } </p>
+				            <p> Servings: { recipe.servings } </p>
+				            <h5> Ingredients: </h5>
+				            {
+				                recipe.ingredients.map((ingredient) => {
+									return(<ul key={ingredient}> - {ingredient} </ul>)
+				                })
+				            }
+				            <h5> Directions: </h5>
+				            <p> { recipe.directions } </p>
+				        </div>
+			        );
+			    })
+			}
+		</div>
+		);
+	}
 
 export default App;
